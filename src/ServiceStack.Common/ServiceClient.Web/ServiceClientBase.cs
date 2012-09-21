@@ -409,7 +409,7 @@ namespace ServiceStack.ServiceClient.Web
                     {
                         using (var stream = errorResponse.GetResponseStream())
                         {
-                            serviceEx.ResponseBody = stream.ToUtf8String();
+                            serviceEx.ResponseBody = GetResponseBody(stream);
                             serviceEx.ResponseDto = DeserializeFromStream<TResponse>(stream);
                         }
                     }
@@ -440,7 +440,32 @@ namespace ServiceStack.ServiceClient.Web
             }
         }
 
-        private WebRequest SendRequest(string requestUri, object request)
+	    private static string GetResponseBody(Stream stream)
+	    {
+			try
+			{
+				var memoryStream = new MemoryStream();
+				int readSize = 256;
+				byte[] buffer = new byte[readSize];
+				int count = stream.Read(buffer, 0, readSize);
+				while (count > 0)
+				{
+					memoryStream.Write(buffer, 0, count);
+					count = stream.Read(buffer, 0, readSize);
+				}
+				memoryStream.Position = 0;
+				stream.Position = 0;
+				return memoryStream.ToUtf8String();
+			}
+			catch (Exception e)
+			{
+				log.Error(e);
+				stream.Position = 0;
+				return "";
+			}
+	    }
+
+	    private WebRequest SendRequest(string requestUri, object request)
         {
             return SendRequest(HttpMethod ?? DefaultHttpMethod, requestUri, request);
         }
